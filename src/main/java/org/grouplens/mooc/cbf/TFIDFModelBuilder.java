@@ -81,7 +81,7 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
             setWorkVectorWithTagFrequency(tagIds, work, item);
             // Incrementing the document frequency vector once for each unique tag on the item.
             for (Long key : work.keySet()) {
-				if(key > 0)
+				if(work.get(key) > 0)
 					docFreq.set(key, docFreq.get(key) + 1);
 			}
             // Save a shrunk copy of the vector (only storing tags that apply to this item) in
@@ -130,12 +130,13 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
 	private void setWorkVectorWithTagFrequency(Map<String, Long> tagIds,
 			MutableSparseVector work, long item) {
 		List<String> tags = new ArrayList<String>(dao.getItemTags(item));
-		Collections.sort(tags, new SortIgnoreCase());
+		Collections.sort(tags);
 		String previousTag = "";
 		double frequency =0.0;
 		
 		for (String tag : tags) {
-			if(tag.equalsIgnoreCase(previousTag)){
+			//if(tag.equals(previousTag)){
+			if(work.containsKey(tagIds.get(tag))){
 				continue;
 			}
 			frequency = getFrequency(tag, tags);
@@ -151,7 +152,7 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
     	int index = tags.indexOf(tag);
     	double frequency=0;
     	for (int i=index;i < tags.size() ;i++){
-    		if(tags.get(i).equalsIgnoreCase(tag))
+    		if(tags.get(i).equals(tag))
     			frequency++;
     		else
     			break;
@@ -177,11 +178,5 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
         return tagIds;
     }
     
-    public class SortIgnoreCase implements Comparator<Object> {
-        public int compare(Object o1, Object o2) {
-            String s1 = (String) o1;
-            String s2 = (String) o2;
-            return s1.toLowerCase().compareTo(s2.toLowerCase());
-        }
-    }
+    
 }
