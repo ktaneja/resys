@@ -78,6 +78,7 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
             work.clear();
             // Now the vector is empty (all keys are 'unset').
             // Populating the work vector with the number of times each tag is applied to this item.
+            
             setWorkVectorWithTagFrequency(tagIds, work, item);
             // Incrementing the document frequency vector once for each unique tag on the item.
             for (Long key : work.keySet()) {
@@ -86,6 +87,7 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
 			}
             // Save a shrunk copy of the vector (only storing tags that apply to this item) in
             // our map, we'll add IDF and normalize later.
+            
             itemVectors.put(item, work.shrinkDomain());
             // work is ready to be reset and re-used for the next item
         }
@@ -93,7 +95,9 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
         // Now we've seen all the items, so we have each item's TF vector and a global vector
         // of document frequencies.
         // Invert and log the document frequency.  We can do this in-place.
-        Long numDocs = (long) docFreq.keySet().size();
+        //Long numDocs = (long) docFreq.keySet().size();
+        Long numDocs = (long) itemVectors.size();
+        SparseVector vec =  itemVectors.get(11L);
         for (VectorEntry e: docFreq.fast()) {
             //Updating this document frequency entry to be a log-IDF value
         	double logIdf = Math.log(numDocs/e.getValue());
@@ -105,14 +109,17 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
         // So we can use it to apply IDF to each item vector to put it in the final model.
         // Create a map to store the final model data.
         Map<Long,SparseVector> modelData = Maps.newHashMap();
+        
         for (Map.Entry<Long,MutableSparseVector> entry: itemVectors.entrySet()) {
             MutableSparseVector tv = entry.getValue();
             // Converting this vector to a TF-IDF vector
-            for (VectorEntry e : tv) {
+            tv.multiply(docFreq);
+            
+            /*for (VectorEntry e : tv) {
             	double logIdf = docFreq.get(e.getKey());
             	double tf = e.getValue();
             	tv.set(e, tf*logIdf);
-			}
+			}*/
             
 
             // Normalizing the TF-IDF vector to be a unit vector
@@ -131,19 +138,18 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
 			MutableSparseVector work, long item) {
 		List<String> tags = new ArrayList<String>(dao.getItemTags(item));
 		Collections.sort(tags);
-		String previousTag = "";
 		double frequency =0.0;
 		
 		for (String tag : tags) {
-			//if(tag.equals(previousTag)){
 			if(work.containsKey(tagIds.get(tag))){
 				continue;
 			}
 			frequency = getFrequency(tag, tags);
 			System.out.println(tag + " " + frequency);
 			long key = tagIds.get(tag);
+			System.out.println(work.containsKey(tagIds.get(tag)));
 			work.set(key, frequency);
-			previousTag = tag;
+			System.out.println(work.containsKey(tagIds.get(tag)));
 		}
 	}
 

@@ -4,6 +4,7 @@ import org.grouplens.lenskit.basic.AbstractItemScorer;
 import org.grouplens.lenskit.data.dao.UserEventDAO;
 import org.grouplens.lenskit.data.event.Rating;
 import org.grouplens.lenskit.data.pref.Preference;
+import org.grouplens.lenskit.vectors.ImmutableSparseVector;
 import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.grouplens.lenskit.vectors.SparseVector;
 import org.grouplens.lenskit.vectors.VectorEntry;
@@ -63,6 +64,10 @@ public class TFIDFItemScorer extends AbstractItemScorer {
     }
 
     private SparseVector makeUserVector(long user) {
+    	if(user == 1){
+    		int debug=1;
+    	}
+    		
         // Get the user's ratings
         List<Rating> userRatings = dao.getEventsForUser(user, Rating.class);
         if (userRatings == null) {
@@ -76,20 +81,28 @@ public class TFIDFItemScorer extends AbstractItemScorer {
         profile.fill(0);
 
         // Iterate over the user's ratings to build their profile
+        double average = getAverage(userRatings);
+        
         for (Rating r: userRatings) {
-            // In LensKit, ratings are expressions of preference
             Preference p = r.getPreference();
-            // We'll never have a null preference. But in LensKit, ratings can have null
-            // preferences to express the user unrating an item
-            if (p != null && p.getValue() >= 3.5) {
-                // The user likes this item!
-                // Get the item's vector and add it to the user's profile
-            	profile.add(model.getItemVector(r.getItemId()));
-            }
+            double n = p.getValue() - average;
+            ImmutableSparseVector itemVector = (ImmutableSparseVector) model.getItemVector(r.getItemId());
+            MutableSparseVector itemVectorCopy = itemVector.mutableCopy();
+            itemVectorCopy.multiply(n);
+            profile.add(itemVectorCopy.freeze());
         }
 
         // The profile is accumulated, return it.
         // It is good practice to return a frozen vector.
         return profile.freeze();
     }
+
+	private double getAverage(List<Rating> userRatings) {
+		double sum =0;
+		for (Rating r: userRatings) {
+            Preference p = r.getPreference();
+            sum += p.getValue();
+		}
+		return sum/userRatings.size();
+	}
 }
